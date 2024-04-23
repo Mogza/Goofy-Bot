@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 )
 
 var s *discordgo.Session
@@ -77,6 +78,33 @@ func InitBot() {
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
 			h(s, i)
+		}
+	})
+
+	s.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
+		if m.Author.ID == s.State.User.ID {
+			return
+		}
+
+		if len(m.Content) > 30 && strings.Count(m.Content, " ") == 0 {
+			var tokenAddress string
+
+			tokenAddress = m.Content
+
+			message, imageUrl := dexApi.GetToken(tokenAddress)
+
+			responseContent := []*discordgo.MessageEmbed{
+				{
+					Title:       "Token Overview :",
+					Description: message,
+					Thumbnail: &discordgo.MessageEmbedThumbnail{
+						URL: imageUrl,
+					},
+				},
+			}
+
+			_, err = s.ChannelMessageSendEmbedsReply(m.ChannelID, responseContent, m.Reference())
+			checkError(err, "Error while responding to `/token`")
 		}
 	})
 }

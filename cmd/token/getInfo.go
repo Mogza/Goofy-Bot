@@ -16,6 +16,7 @@ type Pairs struct {
 type Pair struct {
 	ChainId   string    `json:"chainId"`
 	DexId     string    `json:"dexId"`
+	URL       string    `json:"url"`
 	BaseToken BaseToken `json:"baseToken"`
 	PriceUSD  string    `json:"priceUsd"`
 	FDV       float64   `json:"fdv"`
@@ -90,7 +91,7 @@ func getString(pairs Pairs) string {
 	finalResult := "### :coin: " + tokenAll.BaseToken.Name + " | $" + tokenAll.BaseToken.Symbol
 	finalResult += "\n### :globe_with_meridians: " + makeFirstUpper(tokenAll.ChainId) + " @ " + makeFirstUpper(tokenAll.DexId)
 	finalResult += "\n### :moneybag: USD: $" + tokenAll.PriceUSD
-	finalResult += "\n### :pouring_liquid: FDV: $" + formatValue(tokenAll.FDV)
+	finalResult += "\n### :gem: FDV: $" + formatValue(tokenAll.FDV)
 	finalResult += "\n### :sweat_drops: Liq: $" + formatValue(tokenAll.Liquidity.USD)
 	finalResult += "\n### :bar_chart: Vol: $" + formatValue(tokenAll.Volume.H24)
 
@@ -102,6 +103,14 @@ func getString(pairs Pairs) string {
 	finalResult += "\n###  :black_bird: Socials: "
 	for _, socials := range tokenAll.Info.Socials {
 		finalResult += "[" + makeFirstUpper(socials.Type) + "]" + "(" + makeFirstUpper(socials.URL) + ") | "
+	}
+
+	finalResult += "\n### :satellite: [DEX](" + tokenAll.URL + ")"
+	if tokenAll.ChainId == "solana" {
+		finalResult += " | [SOLSCAN](https://solscan.io/token/" + tokenAll.BaseToken.Address + ")"
+		finalResult += " | [BIRDEYE](https://birdeye.so/token/" + tokenAll.BaseToken.Address + "?chain=solana)"
+		finalResult += " | [DEXTOOLS](https://www.dextools.io/app/en/solana/pair-explorer/" + tokenAll.BaseToken.Address + ")"
+		finalResult += " | [RUGCHECK](https://rugcheck.xyz/tokens/" + tokenAll.BaseToken.Address + ")"
 	}
 
 	finalResult += "\nby [Mogza](https://github.com/Mogza)"
