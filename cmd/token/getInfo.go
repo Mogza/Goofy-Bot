@@ -2,11 +2,9 @@ package dexApi
 
 import (
 	"encoding/json"
-	"fmt"
 	"github/Mogza/Goofy-Bot/cmd/utils"
 	"io"
 	"net/http"
-	"strings"
 )
 
 type Pairs struct {
@@ -58,36 +56,41 @@ type Social struct {
 }
 
 func GetToken(addr string) (string, string) {
+	var pairs Pairs
+
+	// Call Dex Screener API
 	response, err := http.Get("https://api.dexscreener.com/latest/dex/tokens/" + addr)
 	utils.CheckError(err, "Error while calling the API")
 
+	// Get Response
 	responseData, err := io.ReadAll(response.Body)
 	utils.CheckError(err, "Error while reading the response")
 
-	var pairs Pairs
-
+	// Parse Response
 	err = json.Unmarshal(responseData, &pairs)
 	utils.CheckError(err, "Error while parsing json")
 
+	// Return if no token found
 	if len(pairs.Pairs) == 0 {
 		return "# :x: Token not found", ""
 	}
 
+	// Retrieve information on the first pair
 	tokenAll := pairs.Pairs[0]
 	finalResult := getString(pairs)
 
-	return string(finalResult), tokenAll.Info.ImageURL
+	return finalResult, tokenAll.Info.ImageURL
 }
 
 func getString(pairs Pairs) string {
 	tokenAll := pairs.Pairs[0]
 
 	finalResult := "### :coin: " + tokenAll.BaseToken.Name + " | $" + tokenAll.BaseToken.Symbol
-	finalResult += "\n### :globe_with_meridians: " + makeFirstUpper(tokenAll.ChainId) + " @ " + makeFirstUpper(tokenAll.DexId)
+	finalResult += "\n### :globe_with_meridians: " + utils.MakeFirstUpper(tokenAll.ChainId) + " @ " + utils.MakeFirstUpper(tokenAll.DexId)
 	finalResult += "\n### :moneybag: USD: $" + tokenAll.PriceUSD
-	finalResult += "\n### :gem: FDV: $" + formatValue(tokenAll.FDV)
-	finalResult += "\n### :sweat_drops: Liq: $" + formatValue(tokenAll.Liquidity.USD)
-	finalResult += "\n### :bar_chart: Vol: $" + formatValue(tokenAll.Volume.H24)
+	finalResult += "\n### :gem: FDV: $" + utils.FormatValue(tokenAll.FDV)
+	finalResult += "\n### :sweat_drops: Liq: $" + utils.FormatValue(tokenAll.Liquidity.USD)
+	finalResult += "\n### :bar_chart: Vol: $" + utils.FormatValue(tokenAll.Volume.H24)
 
 	finalResult += "\n### :link: Links: "
 	for _, sites := range tokenAll.Info.Websites {
@@ -96,7 +99,7 @@ func getString(pairs Pairs) string {
 
 	finalResult += "\n###  :black_bird: Socials: "
 	for _, socials := range tokenAll.Info.Socials {
-		finalResult += "[" + makeFirstUpper(socials.Type) + "]" + "(" + makeFirstUpper(socials.URL) + ") | "
+		finalResult += "[" + utils.MakeFirstUpper(socials.Type) + "]" + "(" + utils.MakeFirstUpper(socials.URL) + ") | "
 	}
 
 	finalResult += "\n### :satellite: [DEX](" + tokenAll.URL + ")"
@@ -110,26 +113,4 @@ func getString(pairs Pairs) string {
 	finalResult += "\nby [Mogza](https://github.com/Mogza)"
 
 	return finalResult
-}
-
-func makeFirstUpper(s string) string {
-	return strings.ToUpper(s[:1]) + s[1:]
-}
-
-func formatValue(value float64) string {
-	var suffix string
-	var divisor float64
-
-	switch {
-	case value >= 1e6:
-		suffix = "M"
-		divisor = 1e6
-	case value >= 1e3:
-		suffix = "K"
-		divisor = 1e3
-	default:
-		return fmt.Sprintf("%f", value)
-	}
-
-	return fmt.Sprintf("%.1f%s", value/divisor, suffix)
 }
