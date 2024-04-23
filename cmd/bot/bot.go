@@ -1,10 +1,11 @@
 package bot
 
 import (
-	"flag"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
+	"github.com/joho/godotenv"
 	dexApi "github/Mogza/Goofy-Bot/cmd/token"
+	"github/Mogza/Goofy-Bot/cmd/utils"
 	"log"
 	"os"
 	"os/signal"
@@ -13,6 +14,7 @@ import (
 
 var s *discordgo.Session
 
+// Commands list
 var commands = []*discordgo.ApplicationCommand{
 	{
 		Name:        "token",
@@ -28,6 +30,7 @@ var commands = []*discordgo.ApplicationCommand{
 	},
 }
 
+// Command handler function
 var commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 	"token": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		var tokenAddress string
@@ -55,33 +58,13 @@ var commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 				Embeds: responseContent,
 			},
 		})
-		checkError(err, "Error while responding to `/token`")
+		utils.CheckError(err, "Error while responding to `/token`")
 	},
 }
 
-func checkError(e error, message string) {
-	if e != nil {
-		log.Fatalln(message, ":", e)
-	}
-}
-
-func InitBot() {
-	var err error
-
-	flag.Parse()
-
-	// Initialize session
-	s, err = discordgo.New("Bot " + "MTIzMTc1NTkzNDIzNDE4MTY2NQ.GQtFzB.VRQQrjz4fV05a2AB_cSG505PDWKWm1iyLyJmq4")
-	checkError(err, "Error while creating the bot")
-
-	// Handling commands
-	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
-			h(s, i)
-		}
-	})
-
-	s.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
+// Detect token handler function
+var botHandlers = map[string]func(s *discordgo.Session, m *discordgo.MessageCreate){
+	"detectToken": func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if m.Author.ID == s.State.User.ID {
 			return
 		}
@@ -103,28 +86,53 @@ func InitBot() {
 				},
 			}
 
-			_, err = s.ChannelMessageSendEmbedsReply(m.ChannelID, responseContent, m.Reference())
-			checkError(err, "Error while responding to `/token`")
+			_, err := s.ChannelMessageSendEmbedsReply(m.ChannelID, responseContent, m.Reference())
+			utils.CheckError(err, "Error while responding to `/token`")
+		}
+	},
+}
+
+func InitBot() {
+	var err error
+
+	// Loading .env
+	err = godotenv.Load()
+	utils.CheckError(err, "Error while loading the .env")
+
+	// Initialize session
+	s, err = discordgo.New("Bot " + os.Getenv("BOT_TOKEN"))
+	utils.CheckError(err, "Error while creating the bot")
+
+	// Handling commands
+	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
+			h(s, i)
 		}
 	})
+
+	// Handling token detection in chat
+	s.AddHandler(botHandlers["detectToken"])
 }
 
 func Run() {
+	// Open Session and close at return
 	err := s.Open()
-	checkError(err, "Error while running the bot")
+	utils.CheckError(err, "Error while running the bot")
 	defer func(s *discordgo.Session) {
 		err := s.Close()
-		checkError(err, "Error while closing the bot")
+		utils.CheckError(err, "Error while closing the bot")
 	}(s)
 
+	// Loading commands
 	log.Println("Adding commands...")
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
 	for i, v := range commands {
 		cmd, err := s.ApplicationCommandCreate(s.State.User.ID, "", v)
-		checkError(err, "Cannot create command")
+		utils.CheckError(err, "Cannot create command")
 		registeredCommands[i] = cmd
 	}
 
+	// Run the bot
 	fmt.Println("Bot running...")
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

@@ -3,8 +3,8 @@ package dexApi
 import (
 	"encoding/json"
 	"fmt"
+	"github/Mogza/Goofy-Bot/cmd/utils"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -57,23 +57,17 @@ type Social struct {
 	URL  string `json:"url"`
 }
 
-func checkError(e error, message string) {
-	if e != nil {
-		log.Fatalln(message, ":", e)
-	}
-}
-
 func GetToken(addr string) (string, string) {
 	response, err := http.Get("https://api.dexscreener.com/latest/dex/tokens/" + addr)
-	checkError(err, "Error while calling the API")
+	utils.CheckError(err, "Error while calling the API")
 
 	responseData, err := io.ReadAll(response.Body)
-	checkError(err, "Error while reading the response")
+	utils.CheckError(err, "Error while reading the response")
 
 	var pairs Pairs
 
 	err = json.Unmarshal(responseData, &pairs)
-	checkError(err, "Error while parsing json")
+	utils.CheckError(err, "Error while parsing json")
 
 	if len(pairs.Pairs) == 0 {
 		return "# :x: Token not found", ""
